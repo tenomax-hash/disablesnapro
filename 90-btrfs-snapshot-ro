@@ -1,0 +1,6 @@
+#!/bin/bash
+
+if [[ "$(btrfs property get -ts subvolume /new_root ro)" == *"ro=true"* ]]; then
+    btrfs property set -ts subvolume /new_root ro false
+fi
+
