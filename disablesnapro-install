@@ -1,18 +1,15 @@
 #!/bin/bash
 
 build() {
-    add_module btrfs
-    add_binary btrfs
-    add_binary btrfsck
-    add_runscript
+    add_module "btrfs"
+    add_binary "btrfs"
+    add_binary "btrfsck"
+    add_runscript "90-btrfs-snapshot-ro"  # Runs late in initramfs after filesystems hook
 }
 
 help() {
     cat <<HELPEOF
-This hook set property ro=false in snapshot via
-"btrfs property set /new_root ro false" command
-for boot into read-only snapshot without errors.
+BTRFS Snapshot RO Fix: Sets ro=false on /new_root snapshot for bootable writable root.
+Use after Snapper snapshots (which default to ro=true) to avoid mount errors.
 HELPEOF
 }
-
-# vim: set ft=sh ts=4 sw=4 et:
