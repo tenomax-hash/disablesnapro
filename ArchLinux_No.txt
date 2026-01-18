@@ -1,0 +1,443 @@
+----------------------------------------------------------------------------
+/////////* This is my text for creating Arch installatin guide *//////
+----------------------------------------------------------------------------
+
+1-/* Commands used */
+=====================
+
+2-/* Internet check: */
+=======================
+
+	ip a
+	ping -c 5 google.com
+
+3-/* Connect to Wi-Fi at install: */
+====================================
+
+	wifi-menu
+	iwctl
+	device list
+	station scan
+	station get-networks
+	station wlan0 connect Wifi-connection name
+	Enter passphrase and exxit
+	nmtui
+
+
+4-/* Network Time Protocol sync: */
+===================================
+
+	timedatectl set-ntp true
+
+5-/* Disk partitioning: */
+==========================
+
+	fdisk/[disk name] >> g create gpt partable
+	save  : w and y
+	gdisk /dev/nvme0n1 >> create partions EFI,linuxfile system
+
+6-/* Format EFI and Root partitions: */
+=======================================
+
+	mkfs.fat -F32 /dev/[partition name]
+	mkfs.btrfs -f -L Archlinux /dev/[partiton name]
+
+7-/* Mount partitions and subvolume creation: */
+================================================
+
+	mount /dev/[partition name] /mnt
+	btrfs su cr /mnt/@
+	btrfs su cr /mnt/@home
+	btrfs su cr /mnt/@cache
+	btrfs su cr /mnt/@pkg
+	btrfs su cr /mnt/@var_log
+	btrfs su cr /mnt/@snapshots
+
+	Common Mount Points
+	/mnt
+	/mnt/home
+	/mnt/.snapshots
+	/mnt/var/cache
+	/mnt/var/cache/pacman/pkg
+	
+	umount /mnt
+
+
+	mount -o noatime,compress=zstd,space_cach=v2,subvol=@ /dev/[partition name] /mnt
+
+    	mkdir -p /mnt/{boot,home,.snapshots,var/cache,var/cache/pacman/pkg}
+
+    	mount -o noatime,compress=zstd,space_cach=v2,subvol=@home /dev/[partition name] /mnt/home
+	mount -o noatime,compress=zstd,space_cach=v2,subvol=@snapshots /dev/[partition name] /mnt/.snapshots
+	mount -o noatime,compress=zstd,space_cach=v2,subvol=@pkg /dev/[partition name] /mnt/var/cache/pacman/pkg
+	mount -o noatime,compress=zstd,space_cach=v2,subvol=@cache /dev/[partition name] /mnt/var/cache
+
+
+    	mount /dev/[efi partition] /mnt/boot/
+
+
+8-/* Base install: */
+=====================
+	pacman -Sy archlinux-keyring
+
+	pacstrap /mnt base linux linux-firmware vim base-devel amd-ucode btrfs-progs sudo vim (also u can use linux-zen linux-lts kernals)
+
+9-/* Generate the FSTAB file: */
+================================
+
+	genfstab -U /mnt >> /mnt/etc/fstab
+
+10-/* Enter the installation *
+==============================
+
+	arch-chroot /mnt
+
+11-/* Localization (replace accordingly to your Timezone): */
+=============================================================
+
+	ln -sf /usr/share/zoneinfo/Asia/Kolkata /etc/localtime
+	hwclock --systohc
+	nano /etc/locale.gen (uncomment the locale of your choice)
+	locale-gen
+	echo "LANG=your locale here" >> /etc/locale.conf
+
+12-/* Hostname and Hosts file: */
+=================================
+
+	nano /etc/hostname (enter a name of your choice)
+	nano /etc/hosts
+	127.0.0.1 localhost
+	::1       localhost
+	127.0.1.1 hostname.localdomain hostname (replace with your hostname)
+
+13-/* Root password: */
+=======================
+
+	passwd
+	
+18-/* Add user: */
+==================
+
+	useradd -mG wheel username (replace with yours)
+
+19-/* Create password for the user: */
+======================================
+
+	passwd username (replace with yours)
+
+20-/* Give the user Sudo priviledges: */
+========================================
+
+	EDITOR=nano visudo
+	uncomment the %wheel all=(all) all
+
+
+14-/* Bootloader and Networking tools: */
+=========================================
+
+	pacman -S grub efibootmgr networkmanager network-manager-applet grub-btrfs git snapper bluez bluez-utils gnome gnome-tweaks wpa_supplicant
+
+
+15-/* Grub install: */
+======================
+
+    grub-install --target=x86_64-efi --efi-directory=/boot --bootloader-id=GRUB
+
+16-/* Grub configuration file: */
+=================================
+
+	grub-mkconfig -o /boot/grub/grub.cfg
+
+17-/* Activate internet for next reboot: */
+===========================================
+
+	systemctl enable NetworkManager
+	systemctl enable bluetooth
+	systemctl enable gdm //if install gnome desktop enviroment
+
+
+
+21-/* Return to the installer, unmount all partitions and reboot: */
+====================================================================
+
+	exit
+	umount -R /mnt
+	reboot
+
+22-/* Check for internet: */
+============================
+
+	ip a
+
+23-/* If on Wi-Fi connect with: */
+==================================
+
+	nmtui
+
+24-/* Graphics card drivers for Intel, AMD and Nvidia cards: */
+===============================================================
+
+	sudo pacman -S xf86-video-intl
+	sudo pacman -S xf86-video-amdgpu
+	sudo pacman -S nvidia nividia-utils
+
+25-/* Display server: */
+========================
+
+	sudo pacman -S xorg
+
+26-/* Display manager installation and activation: */
+=====================================================
+
+	sudo pacman -S gdm
+	sudo systemctl enable gdm
+
+27-/* Desktop Environment install: */
+=====================================
+
+	sudo pacman -S -needed gnome gnome-extra firefox
+
+28-/* After installatin addition packages need download */
+==========================================================
+
+    drivers downlaod for the grphics
+    pacman -S xcfce4 lightdm lightdm-gtk-greeter lightdm-gtk-greeter-settings
+    echo "exec starxfce4" >> ~/.xinitrc
+    systemctl enable lightdm.service
+
+29-/* Additional packages needed */
+===================================
+
+    yay -S mugshots
+    yay -S gnome-system-tools
+    pacman -S archlinuxwallpapers
+    pacman -S gvfs "Trash Enable"
+
+30-/* Manually Swap partitioning or Swap file Creation:*/
+=========================================================
+    truncate -S 0 /swapfile
+    chattr +C /swapfile
+    btrfs property set /swapfile compression none
+    dd bs=1MB if=/dev/zero of=/swapfile count=2048 status=progress
+    chmod 600 /swapfile
+    mkswap /swapfile
+    swapon /swapfile
+
+another method: for btrfs
+
+[start]
+Corrected Commands (No Subvolume)
+Run as root (sudo -i), with root on Btrfs:
+swapoff -a
+mkdir -p /swap
+touch /swap/swapfile
+chattr +C /swap/swapfile # Disable CoW first (key step)
+chmod 600 /swap/swapfile
+dd if=/dev/zero of=/swap/swapfile bs=1M count=4096 conv=notrunc status=progress # 4 GiB
+chattr -R +C /swap # Optional: recursive CoW disable
+mkswap /swap/swapfile
+swapon /swap/swapfile
+echo "/swap/swapfile none swap defaults 0 0" >> /etc/fstab
+mount -a
+swapon --show
+[End]
+
+
+31-/* Add swapfile to /etc/fstabfile:*/
+=======================================
+
+    /swapfile none swap defaults 0 0
+
+Happy Arch linux users------------------------------/manumanohar
+================================================================
+After reboot install
+
+	git clone https://aur.archlinux.org/yay
+	cd yay
+	makepkg -si PKGBUILD
+
+
+	yay -s snapper-gui snapper snaper-pac snapper-rollback
+
+INstall snapper btrfs
+
+	snapper -c root create-config /
+	# umount /.snapshots
+	# rm -r /.snapshots
+	mkdir /.snapshots
+	mount -a
+
+	OR
+
+	snapper -c root create-config /
+	btrfs su list /mnt
+	btrfs su del /.snapshots
+	mkdir /.snapshots
+	mount -a
+
+	btrfs su get-dfeauls
+	//we want set root subvol
+	btrfs su set-defaul 256 /
+
+	configure snapper timers in vim /etcsnapper/config/root
+
+	ALLOW GROUPS="wheel"
+	chown -R :wheel /.snapshots/
+	systemctl enable --now grub-btrfs.serviece
+	systemctl enable --now snapper-timerline.timer
+	systemctl enable --now snapper-cleanup.timer
+
+	check enable in boot menu check
+
+	grub-mkconfig -o /boot/grub/grub.cfg
+
+	manual snapshots:-
+	----------------------
+	snapper -c root create -d "Name of snapshot"
+	snapper ls
+	test snapper status:-
+	snapper status 4..5
+	Snapper undochange:-
+	snapper undochange 4..5
+			   5..4
+
+
+	Break system rm
+	and recal from grub menu
+
+	boot from old snapshots and recover that in arch way
+	------------------------------------------------------
+	1. cd /
+	2. sudo btrfs sub list /
+	3. snapper ls
+	4. sudo mount /dev/sda2 -o subvolid=5 /mnt
+	5. cd /mnt
+	6. ls -al
+	7. cat @/etc/fstab
+	8 . mv @ @.break
+	9. ls -al
+	10. sudo btrfs subvol snapshot /mnt/@snapshots/3/snapshots /mnt/@
+	11. ls -a
+	12 .Reeboot it done recal its
+
+	sudo btrfs subvol list / | grep 'broken' @.broken
+	delete it
+
+
+
+============================================================================================================
+
+1. install yay -S snapper snapper-pac snapper-rollback grub-btrfs
+
+hi all,
+maybe you would be interested by a custom "hook" for the initramfs, which disables the "read-only" property
+(for Arch linux initramfs only)
+how to:
+Create a file in /etc/initcpio/install/disablesnapro
+Add this:
+
+#!/bin/bash
+
+build() {
+    add_module btrfs
+    add_binary btrfs
+    add_binary btrfsck
+    add_runscript
+}
+
+help() {
+    cat <<HELPEOF
+This hook set property ro=false in snapshot via
+"btrfs property set /new_root ro false" command
+for boot into read-only snapshot without errors.
+HELPEOF
+}
+
+# vim: set ft=sh ts=4 sw=4 et:
+Create a file in /etc/initcpio/hooks/disablesnapro
+Add this:
+
+#!/usr/bin/ash
+
+run_latehook() {
+    btrfs property set /new_root ro false
+}
+
+# vim: set ft=sh ts=4 sw=4 et:
+
+Another script for hooks file
+Create a file in /etc/initcpio/hooks/disablesnapro
+
+Add this:
+
+#!/usr/bin/bash
+run_hook() {
+    local current_dev=$(resolve_device "$root"); # resolve devices for blki
+    if [[ $(blkid ${current_dev} -s TYPE -o value) = "btrfs" ]]; then
+        current_snap=$(mktemp -d); # create a random mountpoint in root of initrafms
+        mount -t btrfs -o ro,"${rootflags}" "$current_dev" "$current_snap";
+        if [[ $(btrfs property get "$current_snap" ro) != "ro=false" ]]; then # check if the snapshot is in read-only mode
+            snaproot=$(mktemp -d);
+            mount -t btrfs -o rw,subvolid=5 "${current_dev}" "${snaproot}";
+            rwdir=$(mktemp -d)
+            mkdir -p ${snaproot}${rwdir} # create a random folder in root fs of btrfs device
+            btrfs sub snap "${current_snap}" "${snaproot}${rwdir}/rw";
+            umount "${current_snap}";
+            umount "${snaproot}";
+            rmdir "${current_snap}";
+            rmdir "${snaproot}";
+            rootflags=",subvol=${rwdir}/rw";
+        else
+            umount "${current_snap}";
+            rmdir "${current_snap}";
+        fi
+    fi
+}
+
+
+Edit your /etc/mkinitcpio.conf
+Add the custom hook at the end of the hooks argument.
+
+HOOKS=(base udev autodetect modconf block filesystems keyboard fsck disablesnapro)
+
+Then generate your new initramfs to include this hook
+via mkinitcpio command.
+(e.g: mkinitcpio -P) for all preset present in /etc/mkinitcpio.d.
+
+before:
+lets check /et/snapper-rollback.conf file to check proper subvol=@snapshots and
+
+enable uncomment correct drive : dev = /dev/nvme0n1p2
+
+then save
+
+lets do : sudo mkinitcpio -P
+
+mkinitcpio -P linux
+
+Your snapshots should contain this functionality.
+So it will not work on previously created snapshots.
+(should work, if your "/ boot" partition is not included in your snapshots.)
+
+Edit: disablesnapro can be renamed, but must be identical in /etc/initcpio/hook and /etc/initcpio/install
+See HOOKS section to Arch Linux wiki.
+
+bootloader backup
+==================
+location /usr/share/lobalpm/hook/50_bootbackup.hook
+
+these file found in github:
+git clone https://github.com/tenomax-hash/disablesnapro.git
+
+also edit with vim set ft=sh tw=4 sw=4
+==========================================
+
+
+set snapper-rollback error shows
+setup writeable snaphot
+
+cmd : sudo btrfs property set -ts /.snapshot/2/snapshot/ ro false
+
+then rollback it works
+
+
