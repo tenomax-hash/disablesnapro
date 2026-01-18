@@ -339,19 +339,47 @@ Add this:
 #!/bin/bash
 
 build() {
-    add_module btrfs
-    add_binary btrfs
-    add_binary btrfsck
-    add_runscript
+    add_module "btrfs"
+    add_binary "btrfs"
+    add_binary "btrfsck"
+    add_runscript "90-btrfs-snapshot-ro"  # Runs late in initramfs after filesystems hook
 }
 
 help() {
     cat <<HELPEOF
-This hook set property ro=false in snapshot via
-"btrfs property set /new_root ro false" command
-for boot into read-only snapshot without errors.
+BTRFS Snapshot RO Fix: Sets ro=false on /new_root snapshot for bootable writable root.
+Use after Snapper snapshots (which default to ro=true) to avoid mount errors.
 HELPEOF
 }
+
+
+Make executable: chmod +x /usr/lib/initcpio/install/disablesnapro.
+​
+
+Run Script
+Create /usr/lib/initcpio/run.d/90-btrfs-snapshot-ro:
+
+#!/bin/bash
+
+if [[ "$(btrfs property get -ts subvolume /new_root ro)" == *"ro=true"* ]]; then
+    btrfs property set -ts subvolume /new_root ro false
+fi
+
+Make executable: chmod +x /usr/lib/initcpio/run.d/90-btrfs-snapshot-ro.
+The 90- prefix ensures it runs after filesystems (which mounts /new_root).
+
+Activation
+Add btrfs-snapshot-ro to HOOKS=() in /etc/mkinitcpio.conf, then run mkinitcpio -P.
+Update GRUB (grub-mkconfig -o /boot/grub/grub.cfg). Boot a Snapper snapshot to test—no RO errors should occur.
+​
+
+
+
+
+
+
+
+
 
 # vim: set ft=sh ts=4 sw=4 et:
 Create a file in /etc/initcpio/hooks/disablesnapro
@@ -440,4 +468,4 @@ cmd : sudo btrfs property set -ts /.snapshot/2/snapshot/ ro false
 
 then rollback it works
 
-
+=================================================
