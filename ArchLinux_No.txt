@@ -75,12 +75,16 @@
 
     	mount /dev/[efi partition] /mnt/boot/
 
+	also verify all mount points correctly mounted usig this command:
+
+	lsblk
+
 
 8-/* Base install: */
 =====================
-	pacman -Sy archlinux-keyring
+	pacman -Sy archlinux-keyring (Update archlinux - package keys to be updated)
 
-	pacstrap /mnt base linux linux-firmware vim base-devel amd-ucode btrfs-progs sudo vim (also u can use linux-zen linux-lts kernals)
+	pacstrap /mnt base linux linux-firmware vim base-devel amd-ucode btrfs-progs sudo vim 
 
 9-/* Generate the FSTAB file: */
 ================================
@@ -96,16 +100,24 @@
 =============================================================
 
 	ln -sf /usr/share/zoneinfo/Asia/Kolkata /etc/localtime
+
 	hwclock --systohc
-	nano /etc/locale.gen (uncomment the locale of your choice)
+
+	vim /etc/locale.gen (uncomment the locale of your choice)
+
 	locale-gen
+
 	echo "LANG=your locale here" >> /etc/locale.conf
 
 12-/* Hostname and Hosts file: */
 =================================
 
 	nano /etc/hostname (enter a name of your choice)
+	
+	archsnap (what ever u like to have)
+
 	nano /etc/hosts
+
 	127.0.0.1 localhost
 	::1       localhost
 	127.0.1.1 hostname.localdomain hostname (replace with your hostname)
@@ -129,13 +141,15 @@
 ========================================
 
 	EDITOR=nano visudo
+
 	uncomment the %wheel all=(all) all
 
 
 14-/* Bootloader and Networking tools: */
 =========================================
 
-	pacman -S grub efibootmgr networkmanager network-manager-applet grub-btrfs git snapper bluez bluez-utils gnome gnome-tweaks wpa_supplicant
+	pacman -S grub efibootmgr os-prober dialog networkmanager network-manager-applet
+		  grub-btrfs git snapper bluez bluez-utils gnome gnome-tweaks wpa_supplicant
 
 
 15-/* Grub install: */
@@ -224,8 +238,10 @@
     swapon /swapfile
 
 another method: for btrfs
+=========================
 
 [start]
+
 Corrected Commands (No Subvolume)
 Run as root (sudo -i), with root on Btrfs:
 swapoff -a
@@ -240,6 +256,7 @@ swapon /swap/swapfile
 echo "/swap/swapfile none swap defaults 0 0" >> /etc/fstab
 mount -a
 swapon --show
+
 [End]
 
 
@@ -250,14 +267,16 @@ swapon --show
 
 Happy Arch linux users------------------------------/manumanohar
 ================================================================
-After reboot install
+
+[Snapper for snapshot for backups]
+
+After reboot and Login user account install
 
 	git clone https://aur.archlinux.org/yay
 	cd yay
 	makepkg -si PKGBUILD
 
-
-	yay -s snapper-gui snapper snaper-pac snapper-rollback
+	yay -s --needed snapper-gui snapper snaper-pac snapper-rollback inotifytools grub-btrfs btrfs-progs
 
 INstall snapper btrfs
 
@@ -333,65 +352,121 @@ hi all,
 maybe you would be interested by a custom "hook" for the initramfs, which disables the "read-only" property
 (for Arch linux initramfs only)
 how to:
-Create a file in /etc/initcpio/install/disablesnapro
-Add this:
+[install-rofix.sh file for script execution : sudo ./install-rofix.sh]
 
+[start --------------------------------------------------------------->]
+
+#!/bin/bash
+
+# btrfs-rofix installer - Single script setup (Multi-location support)
+# Save as install-rofix.sh, then: chmod +x install-rofix.sh && sudo ./install-rofix.sh
+
+HOOK_NAME="btrfs-rofix"
+INSTALL_DIRS=("/usr/lib/initcpio/install" "/etc/initcpio/install")
+HOOK_DIRS=("/usr/lib/initcpio/hooks" "/etc/initcpio/hooks")
+CONFIG_FILE="/etc/mkinitcpio.conf"
+
+# Colors for output
+RED='\033[0;31m'
+GREEN='\033[0;32m'
+YELLOW='\033[1;33m'
+NC='\033[0m' # No Color
+
+error_exit() {
+    echo -e "${RED}Error: $1${NC}" >&2
+    exit 1
+}
+
+# Check root
+[ "$EUID" -ne 0 ] && error_exit "Run as root: sudo $0"
+
+# Install script to all install locations
+for INSTALL_DIR in "${INSTALL_DIRS[@]}"; do
+    mkdir -p "$INSTALL_DIR" || error_exit "Failed to create $INSTALL_DIR"
+    cat > "$INSTALL_DIR/$HOOK_NAME" << 'EOF'
 #!/bin/bash
 
 build() {
     add_module "btrfs"
     add_binary "btrfs"
     add_binary "btrfsck"
-    add_runscript "90-btrfs-snapshot-ro"  # Runs late in initramfs after filesystems hook
+    add_runscript
 }
 
 help() {
-    cat <<HELPEOF
-BTRFS Snapshot RO Fix: Sets ro=false on /new_root snapshot for bootable writable root.
-Use after Snapper snapshots (which default to ro=true) to avoid mount errors.
-HELPEOF
+    cat <<'HELP_EOF'
+This hook sets property ro=false in snapshot via "btrfs property set /new_root ro false"
+command for boot into read-only snapshot without errors.
+HELP_EOF
 }
+EOF
+    chmod +x "$INSTALL_DIR/$HOOK_NAME"
+    echo -e "${GREEN}✓ Created $INSTALL_DIR/$HOOK_NAME${NC}"
+done
 
-
-Make executable: chmod +x /usr/lib/initcpio/install/disablesnapro.
-​
-
-Run Script
-Create /usr/lib/initcpio/run.d/90-btrfs-snapshot-ro:
-
+# Hook script to all hooks locations
+for HOOK_DIR in "${HOOK_DIRS[@]}"; do
+    mkdir -p "$HOOK_DIR" || error_exit "Failed to create $HOOK_DIR"
+    cat > "$HOOK_DIR/$HOOK_NAME" << 'EOF'
 #!/bin/bash
 
-if [[ "$(btrfs property get -ts subvolume /new_root ro)" == *"ro=true"* ]]; then
-    btrfs property set -ts subvolume /new_root ro false
+run_hook() {
+    if [ -e "/new_root" ]; then
+        btrfs property set /new_root ro false
+        echo "Set /new_root to read-write"
+    fi
+}
+EOF
+    chmod +x "$HOOK_DIR/$HOOK_NAME"
+    echo -e "${GREEN}✓ Created $HOOK_DIR/$HOOK_NAME${NC}"
+done
+
+# Backup mkinitcpio.conf
+cp "$CONFIG_FILE" "${CONFIG_FILE}.bak-rofix" || error_exit "Failed to backup config"
+
+# Add hook to HOOKS (insert before filesystems if not already present)
+if ! grep -q "$HOOK_NAME" "$CONFIG_FILE"; then
+    sed -i "/HOOKS=(/ {
+        /filesystems/!b
+        s/\(filesystems\)/\1 $HOOK_NAME/
+    }" "$CONFIG_FILE" || {
+        # Fallback: append before closing parenthesis
+        sed -i "/HOOKS=/,/)/s/)$/ $HOOK_NAME)/" "$CONFIG_FILE"
+    }
+    echo -e "${GREEN}✓ Hook '$HOOK_NAME' added to $CONFIG_FILE${NC}"
+else
+    echo -e "${YELLOW}✓ Hook '$HOOK_NAME' already in config${NC}"
 fi
 
-Make executable: chmod +x /usr/lib/initcpio/run.d/90-btrfs-snapshot-ro.
-The 90- prefix ensures it runs after filesystems (which mounts /new_root).
+echo -e "\n${GREEN}✓ Installation complete! All locations supported:${NC}"
+echo "  Install: ${INSTALL_DIRS[*]}"
+echo "  Hooks:   ${HOOK_DIRS[*]}"
+echo -e "${YELLOW}✓ Backup: ${CONFIG_FILE}.bak-rofix${NC}"
+echo ""
+echo -e "${GREEN}Next steps:${NC}"
+echo "1. mkinitcpio -P"
+echo "2. grub-mkconfig -o /boot/grub/grub.cfg  (if using GRUB)"
+echo "3. Reboot to test"
+echo ""
+echo -e "${YELLOW}Uninstall:${NC}"
+echo "sudo ./uninstall-rofix.sh  (create this if needed) or manually remove files"
 
-Activation
-Add btrfs-snapshot-ro to HOOKS=() in /etc/mkinitcpio.conf, then run mkinitcpio -P.
-Update GRUB (grub-mkconfig -o /boot/grub/grub.cfg). Boot a Snapper snapshot to test—no RO errors should occur.
-​
-
-
-
-
-
-
-
-
+[End---------------------------------------------------------------------------->]
 
 # vim: set ft=sh ts=4 sw=4 et:
 Create a file in /etc/initcpio/hooks/disablesnapro
 Add this:
 
-#!/usr/bin/ash
+#!/usr/bin/bash
 
 run_latehook() {
     btrfs property set /new_root ro false
 }
 
 # vim: set ft=sh ts=4 sw=4 et:
+
+
+
 
 Another script for hooks file
 Create a file in /etc/initcpio/hooks/disablesnapro
@@ -450,9 +525,35 @@ So it will not work on previously created snapshots.
 Edit: disablesnapro can be renamed, but must be identical in /etc/initcpio/hook and /etc/initcpio/install
 See HOOKS section to Arch Linux wiki.
 
-bootloader backup
-==================
+
+
+
+bootloader backup snaphot recovery 
+==========================================
 location /usr/share/lobalpm/hook/50_bootbackup.hook
+
+[script start]
+
+
+[Trigger]
+Operation = Upgrade
+Operation = Install
+Operation = Remove
+Type = Package
+Target = linux*
+
+
+[Action]
+Depends = rsync
+Description = Backing up /boot...
+When = PreTransaction
+Exec = /usr/bin/rsync -a --delete /boot /.bootbackup
+
+
+[script end]
+
+
+
 
 these file found in github:
 git clone https://github.com/tenomax-hash/disablesnapro.git
