@@ -1,0 +1,13 @@
+Export installed packages first: pacman -Qq > pkgs.txt 
+for official repos or pacman -Qqem > aur.txt 
+for AUR/explicit ones.
+Install with sudo pacman -S < pkgs.txt—it reads each line as a package name and fetches from repos.
+​
+
+For yay (AUR helper), use yay -S < aur.txt to handle both repo and AUR packages automatically.
+​
+
+Handling Comments
+If your text file includes comments (e.g., # notes), pacman skips lines starting with 
+# automatically. Ensure one package per line without extra spaces.
+​
