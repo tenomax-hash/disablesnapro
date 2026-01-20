@@ -65,15 +65,15 @@
 
 	mount -o noatime,compress=zstd,space_cach=v2,subvol=@ /dev/[partition name] /mnt
 
-    	mkdir -p /mnt/{boot,home,.snapshots,var/cache,var/cache/pacman/pkg}
+    mkdir -p /mnt/{boot,home,.snapshots,var/cache,var/cache/pacman/pkg}
 
-    	mount -o noatime,compress=zstd,space_cach=v2,subvol=@home /dev/[partition name] /mnt/home
+   	mount -o noatime,compress=zstd,space_cach=v2,subvol=@home /dev/[partition name] /mnt/home
 	mount -o noatime,compress=zstd,space_cach=v2,subvol=@snapshots /dev/[partition name] /mnt/.snapshots
 	mount -o noatime,compress=zstd,space_cach=v2,subvol=@pkg /dev/[partition name] /mnt/var/cache/pacman/pkg
 	mount -o noatime,compress=zstd,space_cach=v2,subvol=@cache /dev/[partition name] /mnt/var/cache
 
 
-    	mount /dev/[efi partition] /mnt/boot/
+    mount /dev/[efi partition] /mnt/boot/
 
 	also verify all mount points correctly mounted usig this command:
 
@@ -84,7 +84,7 @@
 =====================
 	pacman -Sy archlinux-keyring (Update archlinux - package keys to be updated)
 
-	pacstrap /mnt base linux linux-firmware vim base-devel amd-ucode btrfs-progs sudo vim 
+	pacstrap /mnt base linux linux-firmware vim base-devel amd-ucode btrfs-progs sudo vim nano
 
 9-/* Generate the FSTAB file: */
 ================================
@@ -103,7 +103,7 @@
 
 	hwclock --systohc
 
-	vim /etc/locale.gen (uncomment the locale of your choice)
+	vim /etc/locale.gen (uncomment the locale of your choice) "en_US.UTF-8"
 
 	locale-gen
 
@@ -114,7 +114,7 @@
 
 	nano /etc/hostname (enter a name of your choice)
 	
-	archsnap (what ever u like to have)
+	archsnap (what ever u like to have hostname)
 
 	nano /etc/hosts
 
