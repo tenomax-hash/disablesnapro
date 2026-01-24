@@ -96,6 +96,7 @@ git checkout -- <file>
 git restore <file>
 git clean -fd
 git revert <commit>
+git restore --source HEAD~1 <filename>
 
 Viewing History text
 ====================
