@@ -105,3 +105,95 @@ git log --since="2025-01-01"
 git blame <file>
 git show <commit>
 git shortlog -sn
+
+
+Git cheat sheets provide quick references for essential Git commands. Here's a concise, practical overview tailored for daily use, especially on Arch Linux setups with tools like pacman or yay for Git installation.
+
+Setup Basics
+Configure Git with your identity and editor for commits.
+git config --global user.name "Your Name" sets your username globally.
+
+git config --global user.email "email@example.com" defines your email.
+
+Use git config --list to verify settings.
+​
+
+Init and Clone
+Start a new repo or grab an existing one.
+git init initializes a local repository.
+
+git clone <url> copies a remote repo, e.g., git clone https://github.com/user/repo.git.
+
+Add remotes with git remote add origin <url>.
+​
+
+Staging and Committing
+Prepare and save changes efficiently.
+git add <file> stages specific files; git add . stages all.
+
+git commit -m "Message" commits staged changes with a description.
+
+git commit -a -m "Message" stages and commits tracked files automatically.
+​
+
+Branching
+Manage parallel development lines.
+git branch lists local branches; git branch -r shows remotes.
+
+git checkout -b <branch> creates and switches to a new branch.
+
+git checkout <branch> or git switch <branch> switches branches.
+
+Merging and Rebasing
+Integrate changes cleanly.
+git merge <branch> merges into the current branch.
+​
+git pull --rebase fetches and rebases for linear history.
+
+Resolve conflicts by editing files, then git add and git commit.
+​
+
+Remote Sync
+Push and pull with upstream repos.
+git pull fetches and merges remote changes.
+​
+git push origin <branch> uploads your branch.
+​
+git push -u origin <branch> sets upstream tracking.
+​
+
+Viewing History
+Inspect commits and diffs.
+git log shows commit history; git log --oneline for compact view.
+
+git diff displays unstaged changes.
+​
+git show <commit> details a specific commit.
+​
+
+Undoing Changes
+Revert mistakes without panic.
+git checkout -- <file> discards working directory changes.
+
+git restore <file> restores from last commit (Git 2.23+).
+​
+git reset --hard HEAD wipes uncommitted changes; use cautiously.
+​
+
+Stashing
+Temporarily shelve work.
+git stash saves unfinished changes.
+
+git stash pop reapplies the latest stash.
+
+git stash list views stashes.
+​
+
+Tagging
+Mark releases or milestones.
+git tag <tagname> creates a lightweight tag.
+​
+git tag -a <tagname> -m "Message" makes an annotated tag.
+​
+git push origin --tags shares tags.
+
